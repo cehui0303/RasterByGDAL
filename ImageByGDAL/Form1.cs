@@ -41,7 +41,7 @@ namespace ImageByGDAL
                 /* -------------------------------------------------------------------- */
                 /*      Open dataset.                                                   */
                 /* -------------------------------------------------------------------- */
-                string filename = @"D:\迅雷下载\GF6_WFV_E127.9_N46.8_20180823_L1A1119838015\验证集原始图像_8波段.tif";
+                string filename = @"D:\迅雷下载\GF6_WFV_E127.9_N46.8_20180823_L1A1119838015\GF6_WFV_E127.9_N46.8_20180823_L1A1119838015.tif";
                 Dataset ds = Gdal.Open(filename, Access.GA_ReadOnly);
 
                 if (ds == null)
@@ -92,8 +92,9 @@ namespace ImageByGDAL
                 /* -------------------------------------------------------------------- */
                 /*      Processing the raster                                           */
                 /* -------------------------------------------------------------------- */
-                string outfilename = "";
-                SaveBitmapBuffered(ds,outfilename, iOverview);
+                string outfilename = "E:\\output.tif";
+                //SaveBitmapBuffered(ds,outfilename, iOverview);
+                CreateGeotiff(ds);
 
             }
             catch (Exception ex)
@@ -101,6 +102,51 @@ namespace ImageByGDAL
                 Console.WriteLine("Application error: " + ex.Message);
             }
 
+        }
+
+        /// <summary>
+        /// 导出
+        /// </summary>
+        /// <param name="ds"></param>
+        private static void CreateGeotiff(Dataset ds)
+        {
+            // Get the GDAL Band objects from the Dataset
+            Band redBand = ds.GetRasterBand(1);
+
+            // Get the width and height of the raster
+            int width = redBand.XSize/10;
+            int height = redBand.YSize/10;
+
+            //unsi
+
+            DateTime start = DateTime.Now;
+
+            short[] r = new short[width * height];
+
+            Bitmap bmp = new Bitmap(width, height);
+            Graphics g = Graphics.FromImage(bmp);
+            g.Clear(Color.Transparent);
+          
+
+            redBand.ReadRaster(0, 0, width, height, r, width, height, 0, 0);
+
+            double[] argout = new double[6];
+            redBand.ComputeRasterMinMax(argout, 1);  //min 419     max 4095
+
+            int clr = 0;
+            for(int i = 0; i < width; i++)
+            {
+                for(int j = 0;j < height; j++)
+                {
+                    clr = 256 * (r[j*width+i] - 419) / (4095 - 419);
+                    bmp.SetPixel(i, j, Color.FromArgb(clr, 0, 0));
+                }
+            }
+
+            bmp.Save("E:\\output.bmp");
+            
+            TimeSpan renderTime = DateTime.Now - start;
+            Console.WriteLine("SaveBitmapBuffered fetch time: " + renderTime.TotalMilliseconds + " ms");
         }
 
 
@@ -165,8 +211,7 @@ namespace ImageByGDAL
             int width = redBand.XSize;
             int height = redBand.YSize;
 
-            // Create a Bitmap to store the GDAL image in
-            Bitmap bitmap = new Bitmap(width, height, PixelFormat.Format32bppRgb);
+            
 
             DateTime start = DateTime.Now;
 
@@ -179,6 +224,9 @@ namespace ImageByGDAL
             blueBand.ReadRaster(0, 0, width, height, b, width, height, 0, 0);
             TimeSpan renderTime = DateTime.Now - start;
             Console.WriteLine("SaveBitmapBuffered fetch time: " + renderTime.TotalMilliseconds + " ms");
+
+            // Create a Bitmap to store the GDAL image in
+            Bitmap bitmap = new Bitmap(width, height, PixelFormat.Format32bppRgb);
 
             int i, j;
             for (i = 0; i < width; i++)
